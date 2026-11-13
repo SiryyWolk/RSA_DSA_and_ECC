@@ -1,122 +1,83 @@
-# Recon
+# RSA, DSA, and ECC Crypto Demonstrations
 
-Recon is a Python TCP port scanner. It resolves a hostname to an IPv4 address,
-scans a configurable port range, checks which ports are open, and attempts to
-collect service banners.
+This repository contains a small set of Python examples that demonstrate common public-key cryptography workflows using the `cryptography` library.
 
-For open ports, Recon also attempts a TLS handshake. When the service responds
-as HTTP over TLS, the result is reported as HTTPS and the scanner saves TLS and
-certificate information such as:
+The scripts cover:
 
-- TLS version and cipher
-- Certificate subject and issuer
-- Serial number
-- Valid-from and expiration dates
-- Subject alternative names
+- RSA encryption and decryption
+- RSA signing and verification
+- DSA signing and verification
+- ECDSA with a P-256 key
+- ECDH key agreement
+- Hybrid RSA + AES-GCM encryption
+- Public key serialization and comparison across algorithms
 
-Every scan appends a new dated section to `scan_result.json` instead of overwriting the previous one. The timestamp is recorded in Irish time (UTC+1).
+## Project structure
+
+- `rsa_encrypt_decrypt.py` — encrypts and decrypts a message using RSA-OAEP
+- `rsa_sign_verify.py` — signs and verifies a message using RSA-PSS
+- `dsa_sign_verify.py` — signs and verifies a message using DSA
+- `ecc_sign_verify.py` — signs and verifies a message using ECDSA over P-256
+- `ecdh_kem.py` — performs ECDH-based key agreement and KEM-style secret derivation
+- `rsa_hybrid_encrypt_decrypt.py` — hybrid encryption using RSA key encapsulation with AES-GCM
+- `keys.py` — generates and prints public keys for several algorithms
+- `2.1_part_3.py` — demonstrates how a single-byte change in ciphertext breaks RSA decryption
 
 ## Requirements
 
-- Python 3.8 or newer
-- Network access to the target
+- Python 3.8+
+- The `cryptography` package
 
-
-## Usage
-
-Run the scanner from this directory:
+Install dependencies:
 
 ```bash
-python Recon.py <target> [options]
+python -m pip install cryptography
 ```
 
-For example, scan ports 1 through 1024 on localhost:
+## Quick start
+
+Run any of the examples directly from this repository:
 
 ```bash
-python Recon.py 127.0.0.1 -s 1 -e 1024 -t 100
+python rsa_encrypt_decrypt.py
+python rsa_sign_verify.py
+python dsa_sign_verify.py
+python ecc_sign_verify.py
+python ecdh_kem.py
+python rsa_hybrid_encrypt_decrypt.py
+python keys.py
+python 2.1_part_3.py
 ```
 
-Scan a hostname and inspect its HTTPS port:
+Each script is self-contained and generates fresh keys at runtime, then prints the relevant data (plaintext, ciphertext, signatures, or derived secrets).
 
-```bash
-python Recon.py example.com -s 443 -e 443 -t 1
-```
+## What the examples show
 
-Scan a wider range with messages for closed ports:
+### RSA
 
-```bash
-python Recon.py example.com -s 1 -e 10000 -t 100 -v
-```
+RSA is used for both encryption and signatures:
 
-## Options
+- `rsa_encrypt_decrypt.py` shows RSA-OAEP encryption
+- `rsa_sign_verify.py` shows RSA-PSS signatures
+- `rsa_hybrid_encrypt_decrypt.py` shows a practical hybrid construction: RSA encapsulates a secret, and AES-GCM encrypts the actual message
 
-| Option | Description | Default |
-| --- | --- | --- |
-| `target` | IPv4 address or hostname to scan | Required |
-| `-s`, `--start` | First port in the scan range | `1` |
-| `-e`, `--end` | Last port in the scan range | `1024` |
-| `-t`, `--threads` | Number of concurrent scan workers | `100` |
-| `-v`, `--verbose` | Print closed ports and scan errors |
+### DSA and ECDSA
 
-## Results
+These examples show signature schemes based on discrete logarithms:
 
-Open ports are printed in the terminal. HTTPS ports are shown with their TLS
-version and certificate status, for example:
+- `dsa_sign_verify.py` uses standard DSA
+- `ecc_sign_verify.py` uses ECDSA with the secp256r1 curve
 
-```text
-[+] Port 443 is open - HTTPS (TLSv1.3), certificate found
-```
+### ECDH
 
-The full report is appended to `scan_result.json` in dated blocks, for example:
+`ecdh_kem.py` demonstrates key agreement using elliptic-curve Diffie-Hellman, deriving a shared secret with HKDF.
 
-```text
-Scanned at: 2026-09-15 18:32:40
-{
-  "target": "104.20.23.154",
-  "hostname": "Unknown",
-  "scanned_at": "2026-09-15T17:32:40",
-  "port_range": {
-    "start": 443,
-    "end": 443
-  },
-  "open_ports": [
-    {
-      "port": 443,
-      "state": "open",
-      "service": "HTTPS (TLSv1.3), certificate found",
-      "banner": null,
-      "https": true,
-      "tls_version": "TLSv1.3",
-      "tls_cipher": "TLS_AES_256_GCM_SHA384",
-      "certificate": {}
-    }
-  ]
-}
-```
+## Notes
 
-Each new scan adds another timestamped block to the end of the file. The recorded time is in Irish time (UTC+1). The actual `certificate` object contains the certificate fields returned by the TLS server. It is `null` when no certificate is available.
+- These scripts are educational examples, not production-ready cryptographic implementations.
+- They generate ephemeral keys in memory for demonstration purposes.
+- For real-world systems, always use a carefully designed key management strategy, secure storage, and vetted protocol libraries.
 
-## Viewing the JSON report
+## License
 
-Print the log file:
-
-```bash
-cat scan_result.json
-```
-
-If you want to inspect a specific scan block, view the newest section at the end of the file. The file is an append-only log of timestamped scans, not a single overwritten JSON document.
-
-## Using `run.sh`
-
-The included `run.sh` runs a predefined scan. Make it executable once if
-needed:
-
-```bash
-chmod +x run.sh
-./run.sh
-```
-
-To scan a different target with the script, edit the target and options in
-`run.sh`, or run `Recon.py` directly.
-
-Only scan systems that you own or have explicit permission to test.
+This project is intended for educational use. See repository policies or add a license file if you plan to distribute it more broadly.
